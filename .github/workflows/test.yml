@@ -1,0 +1,36 @@
+name: Tests
+
+on:
+  pull_request:
+    branches: [master]
+
+jobs:
+  test:
+    name: Ruby ${{ matrix.ruby }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 'ruby' resolves to the latest stable Ruby release
+        ruby: ['3.0', '3.1', '3.2', '3.3', '3.4', 'ruby']
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Ruby ${{ matrix.ruby }}
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby }}
+
+      - name: Install dependencies
+        run: gem install ruby-ole vpim minitest test-unit
+
+      - name: Run all tests
+        run: |
+          status=0
+          # test_pst.rb is excluded, matching the Rakefile
+          for f in $(find test -name '*test*.rb' ! -name test_pst.rb | sort); do
+            echo "::group::$f"
+            ruby -Ilib -Itest "$f" || status=1
+            echo "::endgroup::"
+          done
+          exit $status

@@ -1,11 +1,14 @@
 require 'base64'
 require 'mapi/mime'
 require 'time'
+require_relative './date_module'
 
 # there is still some Msg specific stuff in here.
 
 module Mapi
 	class Message
+		include ::Mapi::DateModule
+
 		def mime
 			return @mime if @mime
 			# if these headers exist at all, they can be helpful. we may however get a
@@ -97,7 +100,7 @@ module Mapi
 				# use this preference order, or pull the most recent?
 				keys = %w[message_delivery_time client_submit_time last_modification_time creation_time]
 				time = keys.each { |key| break time if time = props.send(key) }
-				time = nil unless Date === time
+				time = nil unless Date === time || Time === time
 
 				# now convert and store
 				# this is a little funky. not sure about time zone stuff either?
@@ -105,7 +108,7 @@ module Mapi
 				# i have no timezone info anyway.
 				# in gmail, i see stuff like 15 Jan 2007 00:48:19 -0000, and it displays as 11:48.
 				# can also add .localtime here if desired. but that feels wrong.
-				headers['Date'] = [Time.iso8601(time.to_s).rfc2822] if time
+				headers['Date'] = [to_rfc2822(time)] if time
 			end
 
 			# some very simplistic mapping between internet message headers and the
@@ -235,7 +238,7 @@ module Mapi
 			# hmmm, have to use read here. that assumes that the data isa stream.
 			# but if the attachment data is a string, then it won't work. possible?
 			data_str = if @embedded_msg
-				mime.headers['Content-Type'] = 'message/rfc822'
+				mime.headers['Content-Type'] = ['message/rfc822']
 				# lets try making it not base64 for now
 				mime.headers.delete 'Content-Transfer-Encoding'
 				# not filename. rather name, or something else right?
@@ -260,13 +263,15 @@ module Mapi
 	end
 
 	class Msg < Message
+		include ::Mapi::DateModule
+
 		def populate_headers
 			super
 			if !headers.has_key?('Date')
 				# can employ other methods for getting a time. heres one in a similar vein to msgconvert.pl,
 				# ie taking the time from an ole object
 				time = @root.ole.dirents.map { |dirent| dirent.modify_time || dirent.create_time }.compact.sort.last
-				headers['Date'] = [Time.iso8601(time.to_s).rfc2822] if time
+				headers['Date'] = [to_rfc2822(time)] if time
 			end
 		end
 	end
