@@ -110,7 +110,7 @@ module Mapi
 				# use this preference order, or pull the most recent?
 				keys = %w[message_delivery_time client_submit_time last_modification_time creation_time]
 				time = keys.each { |key| break time if time = props.send(key) }
-				time = nil unless Date === time
+				time = nil unless Date === time || Time === time
 
 				# now convert and store
 				# this is a little funky. not sure about time zone stuff either?
